@@ -36,7 +36,7 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
     if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY is not set on the server." });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const file = req.file;
     const isPDF = file.mimetype === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
