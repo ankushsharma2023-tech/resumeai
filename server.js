@@ -1,13 +1,16 @@
 const express = require("express");
 const multer = require("multer");
 const Groq = require("groq-sdk");
+const pdfParse = require("pdf-parse");
 const path = require("path");
 
 const app = express();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: {
+    fileSize: 10 * 1024 * 1024
+  }
 });
 
 app.use(express.json());
@@ -16,11 +19,13 @@ app.use(express.static(path.join(__dirname, "public")));
 const PROMPT = `
 You are an expert resume reviewer.
 
-Analyze the resume and return ONLY a valid JSON object.
+Analyze the resume carefully and return ONLY a valid JSON object.
 
-Do not use markdown.
-Do not use backticks.
-Do not explain anything.
+Return ONLY valid JSON.
+No markdown.
+No comments.
+No explanation.
+No extra text before or after JSON.
 
 Return JSON in this exact format:
 
@@ -76,48 +81,66 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
 
     let resumeText = "";
 
-    if (
+    const isPDF =
       file.mimetype === "application/pdf" ||
-      file.originalname.toLowerCase().endsWith(".pdf")
-    ) {
-      resumeText = file.buffer.toString("utf-8");
+      file.originalname.toLowerCase().endsWith(".pdf");
+
+    if (isPDF) {
+      const pdfData = await pdfParse(file.buffer);
+      resumeText = pdfData.text;
     } else {
       resumeText = file.buffer.toString("utf-8");
     }
 
+    if (!resumeText || resumeText.trim().length === 0) {
+      return res.status(400).json({
+        error: "Could not extract text from resume"
+      });
+    }
+
+    // Prevent token overflow
+    resumeText = resumeText.slice(0, 12000);
+
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      temperature: 0.3,
+      temperature: 0.2,
       messages: [
         {
+          role: "system",
+          content: PROMPT
+        },
+        {
           role: "user",
-          content: `
-${PROMPT}
-
-RESUME CONTENT:
-${resumeText}
-`
+          content: `Resume Content:\n\n${resumeText}`
         }
       ]
     });
 
     const raw = completion.choices[0].message.content;
 
-    const clean = raw
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    // Extract JSON safely
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+
+    if (start === -1 || end === -1) {
+      return res.status(500).json({
+        error: "No JSON found in AI response",
+        raw
+      });
+    }
+
+    const jsonString = raw.slice(start, end + 1);
 
     let data;
 
     try {
-      data = JSON.parse(clean);
+      data = JSON.parse(jsonString);
     } catch (jsonError) {
-      console.error("Invalid JSON:", clean);
+      console.error("Invalid JSON:", jsonString);
 
       return res.status(500).json({
         error: "AI returned invalid JSON",
-        raw: clean
+        raw: jsonString
       });
     }
 
