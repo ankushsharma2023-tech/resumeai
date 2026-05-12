@@ -1,7 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const Groq = require("groq-sdk");
-const pdfParse = require("pdf-parse");
+const pdf = require("pdf-parse");
+const mammoth = require("mammoth");
 const path = require("path");
 
 const app = express();
@@ -85,9 +86,25 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
       file.mimetype === "application/pdf" ||
       file.originalname.toLowerCase().endsWith(".pdf");
 
+    const isDOCX =
+      file.mimetype ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.originalname.toLowerCase().endsWith(".docx");
+
+    // PDF parsing
     if (isPDF) {
-      const pdfData = await pdfParse(file.buffer);
+      const pdfData = await pdf(file.buffer);
       resumeText = pdfData.text;
+
+    // DOCX parsing
+    } else if (isDOCX) {
+      const docxData = await mammoth.extractRawText({
+        buffer: file.buffer
+      });
+
+      resumeText = docxData.value;
+
+    // TXT fallback
     } else {
       resumeText = file.buffer.toString("utf-8");
     }
@@ -118,7 +135,7 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
 
     const raw = completion.choices[0].message.content;
 
-    // Extract JSON safely
+    // Safely extract JSON
     const start = raw.indexOf("{");
     const end = raw.lastIndexOf("}");
 
