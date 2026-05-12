@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResumeAI – Smart Resume Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper: #f5f2ec;
+      --ink: #0d0d0d;
+      --accent: #4f46e5;
+      --accent-hover: #3730a3;
+      --accent-light: #eef2ff;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --blue: #2563eb;
+      --blue-light: #dbeafe;
+      --orange: #d97706;
+      --orange-light: #fef3c7;
+      --red: #dc2626;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --white: #ffffff;
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+    h1,h2,h3,h4,h5 { font-family: 'Syne', sans-serif; }
+    .hidden { display: none !important; }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .header-inner {
+      max-width: 900px; margin: 0 auto;
+      height: 62px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; }
+    .badge {
+      font-size: 12px; color: var(--muted);
+      background: var(--paper); border: 1px solid var(--border);
+      border-radius: 50px; padding: 4px 12px; font-weight: 500;
+    }
+
+    /* ── MAIN ── */
+    main { max-width: 900px; margin: 0 auto; padding: 52px 20px 80px; }
+
+    /* ── HERO ── */
+    .hero { text-align: center; margin-bottom: 52px; }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-light); color: var(--accent);
+      border-radius: 50px; padding: 6px 14px; font-size: 13px; font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 7vw, 60px); font-weight: 800;
+      letter-spacing: -2px; line-height: 1.05; margin-bottom: 18px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p { font-size: 17px; color: var(--muted); max-width: 440px; margin: 0 auto; line-height: 1.7; }
+
+    /* ── UPLOAD ── */
+    #drop-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 24px; padding: 60px 32px;
+      text-align: center; cursor: pointer;
+      background: var(--white);
+      transition: all 0.25s;
+      max-width: 540px; margin: 0 auto 36px;
+      box-shadow: var(--card-shadow);
+    }
+    #drop-zone:hover, #drop-zone.drag {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(79,70,229,0.12);
+    }
+    .dz-icon-wrap {
+      width: 72px; height: 72px; border-radius: 20px;
+      background: var(--accent-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; margin: 0 auto 18px;
+    }
+    #drop-zone h3 { font-size: 21px; font-weight: 700; margin-bottom: 8px; }
+    #drop-zone p { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+    #file-input { display: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white; border: none; border-radius: 50px;
+      padding: 13px 32px; font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 15px; cursor: pointer;
+      transition: all 0.2s; box-shadow: 0 4px 14px rgba(79,70,229,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,70,229,0.4); }
+    .btn-primary:disabled { background: #d1d5db; box-shadow: none; cursor: not-allowed; transform: none; }
+
+    .features-row {
+      display: flex; justify-content: center; gap: 10px;
+      flex-wrap: wrap; margin-top: 12px;
+    }
+    .feat-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 50px; padding: 7px 14px;
+      font-size: 13px; color: #374151; font-weight: 500;
+      box-shadow: var(--card-shadow);
+    }
+
+    /* ── LOADING ── */
+    #loading { text-align: center; padding: 100px 0; }
+    .loading-anim {
+      width: 72px; height: 72px; border-radius: 20px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; margin: 0 auto 24px;
+      animation: float 2s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0); box-shadow: 0 8px 20px rgba(79,70,229,0.3); }
+      50% { transform: translateY(-8px); box-shadow: 0 16px 30px rgba(79,70,229,0.2); }
+    }
+    .loading-bar-track {
+      width: 240px; height: 4px; background: #e5e7eb;
+      border-radius: 4px; margin: 20px auto 0; overflow: hidden;
+    }
+    .loading-bar-fill {
+      height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #7c3aed);
+      border-radius: 4px; animation: loadbar 12s ease forwards;
+    }
+    @keyframes loadbar { 0%{width:0%} 30%{width:40%} 70%{width:75%} 95%{width:92%} 100%{width:95%} }
+    #loading h2 { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
+    #loading .sub { color: var(--muted); font-size: 15px; }
+
+    /* ── RESULT HEADER ── */
+    .result-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 32px; flex-wrap: wrap; gap: 14px;
+    }
+    .result-header h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .result-header .sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .btn-ghost {
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: 50px; padding: 10px 22px;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px;
+      cursor: pointer; color: #374151; transition: all 0.2s;
+      box-shadow: var(--card-shadow);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── SCORE ── */
+    #score-section { text-align: center; margin-bottom: 8px; }
+    #score-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; margin-top: 6px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 18px; padding: 22px 26px; margin-bottom: 16px;
+      box-shadow: var(--card-shadow); transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .card-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+      flex-shrink: 0;
+    }
+    .card-header h3 { font-size: 15px; font-weight: 700; }
+
+    /* icon bg colors */
+    .icon-purple { background: #ede9fe; }
+    .icon-green  { background: var(--green-light); }
+    .icon-orange { background: var(--orange-light); }
+    .icon-blue   { background: var(--blue-light); }
+    .icon-red    { background: #fee2e2; }
+    .icon-gray   { background: #f3f4f6; }
+
+    /* check list */
+    .check-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+    .check-list li { display: flex; gap: 10px; font-size: 14px; color: #374151; line-height: 1.6; }
+    .bullet { flex-shrink: 0; font-weight: 700; font-size: 15px; }
+    .b-green  { color: var(--green); }
+    .b-orange { color: var(--orange); }
+
+    /* tags */
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .tag { border-radius: 8px; padding: 5px 12px; font-size: 13px; font-weight: 500; }
+    .tag-blue   { background: var(--blue-light); color: var(--blue); }
+    .tag-green  { background: var(--green-light); color: var(--green); }
+    .tag-purple { background: #ede9fe; color: #5b21b6; }
+
+    /* exp / edu */
+    .exp-item { border-left: 3px solid var(--accent); padding-left: 16px; margin-bottom: 16px; }
+    .exp-item:last-child { margin-bottom: 0; }
+    .exp-role { font-weight: 700; font-size: 15px; }
+    .exp-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .exp-note { font-size: 14px; color: #374151; margin-top: 5px; line-height: 1.6; }
+    .edu-item { border-left: 3px solid var(--blue); padding-left: 16px; margin-bottom: 12px; }
+    .edu-item:last-child { margin-bottom: 0; }
+
+    /* ATS */
+    .ats-row { display: flex; align-items: center; gap: 14px; }
+    .ats-bar-track { flex: 1; height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
+    .ats-bar-fill { height: 100%; border-radius: 5px; transition: width 1.2s ease; }
+    .ats-pct { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 22px; min-width: 56px; }
+    .ats-notes { font-size: 14px; color: #4b5563; margin-top: 12px; line-height: 1.7; }
+
+    /* suggestions */
+    .suggestion {
+      display: flex; gap: 12px;
+      background: #fafafa; border: 1px solid #f0f0f0;
+      border-radius: 12px; padding: 12px 16px;
+      font-size: 14px; color: #374151; line-height: 1.6;
+      margin-bottom: 10px; transition: background 0.2s;
+    }
+    .suggestion:last-child { margin-bottom: 0; }
+    .suggestion:hover { background: var(--accent-light); border-color: #c7d2fe; }
+    .sug-icon { flex-shrink: 0; font-size: 16px; }
+
+    /* summary */
+    .summary-text { font-size: 15px; color: #374151; line-height: 1.8; }
+
+    /* ── ERROR ── */
+    #error-screen { text-align: center; padding: 100px 0; }
+    .err-icon { font-size: 56px; margin-bottom: 20px; }
+    #error-screen h2 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+    #error-screen p { color: var(--muted); font-size: 15px; max-width: 420px; margin: 0 auto 20px; line-height: 1.6; }
+    #error-detail {
+      background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 10px; padding: 12px 18px;
+      font-size: 13px; color: #7f1d1d;
+      max-width: 480px; margin: 0 auto 28px;
+      word-break: break-word; line-height: 1.6;
+    }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 20px 24px;
+      text-align: center; font-size: 13px; color: #9ca3af;
+    }
+    footer a { color: #6b7280; text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">📊</div>
+      <span class="logo-text">ResumeAI</span>
+    </div>
+    <span class="badge">✨ Powered by Gemini AI · Free</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- UPLOAD SCREEN -->
+  <div id="upload-screen">
+    <div class="hero">
+      <div class="hero-tag">🆓 100% Free · No signup needed</div>
+      <h1>Get your resume<br><span>analyzed instantly</span></h1>
+      <p>Upload your resume and get a detailed AI-powered analysis — score, strengths, ATS check, and more.</p>
+    </div>
+
+    <div id="drop-zone">
+      <div class="dz-icon-wrap">📄</div>
+      <h3>Drop your resume here</h3>
+      <p>Supports PDF, TXT · up to 10MB</p>
+      <button class="btn-primary" onclick="document.getElementById('file-input').click()">
+        Choose File to Analyze
+      </button>
+      <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx" />
+    </div>
+
+    <div class="features-row">
+      <div class="feat-pill">🎯 Overall Score</div>
+      <div class="feat-pill">🛠️ Skills Analysis</div>
+      <div class="feat-pill">🤖 ATS Check</div>
+      <div class="feat-pill">💡 Suggestions</div>
+      <div class="feat-pill">💼 Experience Review</div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading" class="hidden">
+    <div class="loading-anim">🔍</div>
+    <h2>Analyzing your resume…</h2>
+    <p class="sub" id="loading-name" style="margin-bottom:6px"></p>
+    <p class="sub" style="font-size:13px;color:#9ca3af">This takes about 10–20 seconds</p>
+    <div class="loading-bar-track">
+      <div class="loading-bar-fill" id="loading-bar"></div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result-screen" class="hidden">
+    <div class="result-header">
+      <div>
+        <h2>Analysis Complete ✅</h2>
+        <div class="sub" id="result-filename"></div>
+      </div>
+      <button class="btn-ghost" onclick="resetToUpload()">↑ Analyze Another Resume</button>
+    </div>
+    <div id="result-body"></div>
+  </div>
+
+  <!-- ERROR -->
+  <div id="error-screen" class="hidden">
+    <div class="err-icon">⚠️</div>
+    <h2>Analysis Failed</h2>
+    <p>Something went wrong. Please check your file and try again.</p>
+    <div id="error-detail"></div>
+    <button class="btn-primary" onclick="resetToUpload()">Try Again</button>
+  </div>
+
+</main>
+
+<footer>
+  ResumeAI · Powered by Google Gemini AI · 
+  <a href="https://aistudio.google.com" target="_blank">Get your free API key</a> · 
+  Your files are never stored
+</footer>
+
+<script>
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("file-input");
+
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.classList.remove("drag");
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+  function show(id) {
+    ["upload-screen","loading","result-screen","error-screen"].forEach(i =>
+      document.getElementById(i).classList.toggle("hidden", i !== id)
+    );
+    // reset loading bar animation
+    if (id === "loading") {
+      const bar = document.getElementById("loading-bar");
+      bar.style.animation = "none";
+      bar.offsetHeight; // reflow
+      bar.style.animation = "loadbar 12s ease forwards";
+    }
+  }
+
+  function resetToUpload() {
+    show("upload-screen");
+    fileInput.value = "";
+  }
+
+  async function handleFile(file) {
+    document.getElementById("loading-name").textContent = "Reading: " + file.name;
+    document.getElementById("result-filename").textContent = "File: " + file.name;
+    show("loading");
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const res = await fetch("/api/analyze", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Server returned an error");
+      renderResult(data);
+      show("result-screen");
+    } catch (err) {
+      document.getElementById("error-detail").textContent = err.message;
+      show("error-screen");
+    }
+  }
+
+  function scoreColor(n) {
+    return n >= 75 ? "#059669" : n >= 50 ? "#d97706" : "#dc2626";
+  }
+  function scoreLabel(n) {
+    return n >= 85 ? "🏆 Excellent Resume!" : n >= 70 ? "👍 Good Resume" : n >= 50 ? "⚠️ Needs Some Work" : "🔴 Major Revision Needed";
+  }
+
+  function esc(s) {
+    return String(s||"")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function card(iconBg, icon, title, inner) {
+    return `<div class="card">
+      <div class="card-header">
+        <div class="card-icon ${iconBg}">${icon}</div>
+        <h3>${title}</h3>
+      </div>
+      ${inner}
+    </div>`;
+  }
+
+  function renderResult(d) {
+    const body = document.getElementById("result-body");
+    const pct = Math.min(100, Math.max(0, d.score || 0));
+    const c = scoreColor(pct);
+    const r = 54, circ = 2 * Math.PI * r, dash = (pct / 100) * circ;
+
+    let html = `<div id="score-section">
+      <svg width="150" height="150" viewBox="0 0 150 150">
+        <circle cx="75" cy="75" r="${r}" fill="none" stroke="#e5e7eb" stroke-width="11"/>
+        <circle cx="75" cy="75" r="${r}" fill="none" stroke="${c}" stroke-width="11"
+          stroke-dasharray="${dash} ${circ - dash}" stroke-linecap="round"
+          transform="rotate(-90 75 75)" style="transition:stroke-dasharray 1.2s ease"/>
+        <text x="75" y="70" text-anchor="middle" font-family="Syne" font-size="32" font-weight="800" fill="${c}">${pct}</text>
+        <text x="75" y="89" text-anchor="middle" font-family="DM Sans" font-size="13" fill="#9ca3af">out of 100</text>
+      </svg>
+      <div id="score-label" style="color:${c}">${scoreLabel(pct)}</div>
+    </div>`;
+
+    if (d.summary) {
+      html += card("icon-purple","📋","Summary",
+        `<p class="summary-text">${esc(d.summary)}</p>`);
+    }
+
+    if (d.strengths?.length) {
+      const items = d.strengths.map(s =>
+        `<li><span class="bullet b-green">✓</span><span>${esc(s)}</span></li>`).join("");
+      html += card("icon-green","✅","Strengths",
+        `<ul class="check-list">${items}</ul>`);
+    }
+
+    if (d.improvements?.length) {
+      const items = d.improvements.map(s =>
+        `<li><span class="bullet b-orange">!</span><span>${esc(s)}</span></li>`).join("");
+      html += card("icon-orange","⚠️","Areas to Improve",
+        `<ul class="check-list">${items}</ul>`);
+    }
+
+    if (d.skills?.length) {
+      html += card("icon-blue","🛠️","Skills Found",
+        `<div class="tags">${d.skills.map(s=>`<span class="tag tag-blue">${esc(s)}</span>`).join("")}</div>`);
+    }
+
+    if (d.keywords?.length) {
+      html += card("icon-green","🔑","Keywords",
+        `<div class="tags">${d.keywords.map(s=>`<span class="tag tag-green">${esc(s)}</span>`).join("")}</div>`);
+    }
+
+    if (d.experience?.length) {
+      const exps = d.experience.map(e => `
+        <div class="exp-item">
+          <div class="exp-role">${esc(e.role||"")}</div>
+          <div class="exp-meta">${esc(e.company||"")}${e.duration?" · "+esc(e.duration):""}</div>
+          ${e.highlights?`<div class="exp-note">${esc(e.highlights)}</div>`:""}
+        </div>`).join("");
+      html += card("icon-purple","💼","Experience Highlights", exps);
+    }
+
+    if (d.education?.length) {
+      const edus = d.education.map(e => `
+        <div class="edu-item">
+          <div class="exp-role">${esc(e.degree||"")}</div>
+          <div class="exp-meta">${esc(e.institution||"")}${e.year?" · "+esc(e.year):""}</div>
+        </div>`).join("");
+      html += card("icon-blue","🎓","Education", edus);
+    }
+
+    if (d.ats_score !== undefined) {
+      const ac = scoreColor(d.ats_score);
+      html += card("icon-gray","🤖","ATS Compatibility", `
+        <div class="ats-row">
+          <div class="ats-bar-track">
+            <div class="ats-bar-fill" style="width:${d.ats_score}%;background:${ac}"></div>
+          </div>
+          <span class="ats-pct" style="color:${ac}">${d.ats_score}%</span>
+        </div>
+        ${d.ats_notes?`<div class="ats-notes">${esc(d.ats_notes)}</div>`:""}`);
+    }
+
+    if (d.suggestions?.length) {
+      const sugs = d.suggestions.map(s =>
+        `<div class="suggestion"><span class="sug-icon">💡</span><span>${esc(s)}</span></div>`).join("");
+      html += card("icon-orange","💡","Actionable Suggestions", sugs);
+    }
+
+    body.innerHTML = html;
+  }
+</script>
+</body>
+</html>
