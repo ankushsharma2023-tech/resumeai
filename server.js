@@ -93,20 +93,33 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
 
     // PDF parsing
     if (isPDF) {
+      console.log("PDF detected");
+
       const pdfData = await pdf(file.buffer);
+
       resumeText = pdfData.text;
+
+      console.log("Extracted PDF text length:", resumeText.length);
 
     // DOCX parsing
     } else if (isDOCX) {
+      console.log("DOCX detected");
+
       const docxData = await mammoth.extractRawText({
         buffer: file.buffer
       });
 
       resumeText = docxData.value;
 
+      console.log("Extracted DOCX text length:", resumeText.length);
+
     // TXT fallback
     } else {
+      console.log("TXT detected");
+
       resumeText = file.buffer.toString("utf-8");
+
+      console.log("Extracted TXT text length:", resumeText.length);
     }
 
     if (!resumeText || resumeText.trim().length === 0) {
@@ -134,6 +147,8 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
     });
 
     const raw = completion.choices[0].message.content;
+
+    console.log("Raw AI response:", raw);
 
     // Safely extract JSON
     const start = raw.indexOf("{");
