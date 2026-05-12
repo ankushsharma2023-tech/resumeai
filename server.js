@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require("groq-sdk");
 const path = require("path");
 
 const app = express();
@@ -54,6 +54,10 @@ Return JSON in this exact format:
 Be detailed and accurate based on the resume provided.
 `;
 
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
+
 app.post("/api/analyze", upload.single("resume"), async (req, res) => {
   try {
     if (!req.file) {
@@ -62,52 +66,42 @@ app.post("/api/analyze", upload.single("resume"), async (req, res) => {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
+    if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({
-        error: "GEMINI_API_KEY missing"
+        error: "GROQ_API_KEY missing"
       });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash"
-    });
-
     const file = req.file;
 
-    const isPDF =
+    let resumeText = "";
+
+    if (
       file.mimetype === "application/pdf" ||
-      file.originalname.toLowerCase().endsWith(".pdf");
-
-    let result;
-
-    if (isPDF) {
-      const base64Data = file.buffer.toString("base64");
-
-      result = await model.generateContent([
-        {
-          inlineData: {
-            mimeType: "application/pdf",
-            data: base64Data
-          }
-        },
-        PROMPT
-      ]);
+      file.originalname.toLowerCase().endsWith(".pdf")
+    ) {
+      resumeText = file.buffer.toString("utf-8");
     } else {
-      const text = file.buffer.toString("utf-8");
+      resumeText = file.buffer.toString("utf-8");
+    }
 
-      result = await model.generateContent(`
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "user",
+          content: `
 ${PROMPT}
 
 RESUME CONTENT:
-${text}
-`);
-    }
+${resumeText}
+`
+        }
+      ]
+    });
 
-    const raw = result.response.text();
+    const raw = completion.choices[0].message.content;
 
     const clean = raw
       .replace(/```json/g, "")
@@ -138,7 +132,7 @@ ${text}
   }
 });
 
-app.use( (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
